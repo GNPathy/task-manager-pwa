@@ -176,27 +176,41 @@ function exportToCalendar(task) {
     
     const endDate = new Date(startDate.getTime() + (task.duration * 60000));
     
-    // Format dates for ICS with timezone
+    // Format dates for ICS in Pacific Time
     const formatDate = (date) => {
-        // Get timezone offset in minutes and convert to HHMM
-        const tzOffset = -date.getTimezoneOffset();
-        const tzSign = tzOffset >= 0 ? '+' : '-';
-        const tzHours = Math.floor(Math.abs(tzOffset) / 60);
-        const tzMinutes = Math.abs(tzOffset) % 60;
-        const tzString = tzSign + 
-            String(tzHours).padStart(2, '0') + 
-            String(tzMinutes).padStart(2, '0');
-            
-        // Format date components
-        const pad = n => n < 10 ? '0' + n : n;
-        return date.getFullYear() +
-            pad(date.getMonth() + 1) +
-            pad(date.getDate()) +
-            'T' +
-            pad(date.getHours()) +
-            pad(date.getMinutes()) +
-            pad(date.getSeconds()) +
-            tzString;
+        // Convert to Pacific Time
+        const options = { 
+            timeZone: 'America/Los_Angeles',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+        
+        // Format date in Pacific Time
+        const dtf = new Intl.DateTimeFormat('en-US', options);
+        const [
+            { value: month },
+            ,
+            { value: day },
+            ,
+            { value: year },
+            ,
+            { value: hour },
+            ,
+            { value: minute },
+            ,
+            { value: second }
+        ] = dtf.formatToParts(date);
+        
+        // Format as YYYYMMDDTHHMMSS (Pacific Time is -0700 or -0800 depending on DST)
+        const isPDT = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).includes('PDT');
+        const tzOffset = isPDT ? '-0700' : '-0800';
+        
+        return `${year}${month}${day}T${hour}${minute}${second}${tzOffset}`;
     };
     
     const start = formatDate(startDate);
@@ -211,8 +225,8 @@ function exportToCalendar(task) {
         'CALSCALE:GREGORIAN',
         'BEGIN:VEVENT',
         `DTSTAMP:${now}`,
-        `DTSTART;TZID=${Intl.DateTimeFormat().resolvedOptions().timeZone}:${start}`,
-        `DTEND;TZID=${Intl.DateTimeFormat().resolvedOptions().timeZone}:${end}`,
+        `DTSTART:${start}`,
+        `DTEND:${end}`,
         `SUMMARY:${task.title}`,
         `DESCRIPTION:${task.title}`,
         'END:VEVENT',
