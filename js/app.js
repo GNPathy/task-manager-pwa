@@ -270,17 +270,25 @@ function formatDateForICS(date) {
 function getRRule(task) {
     if (!task.recurrence) return '';
     
-    const dtStart = new Date(
-        `20${task.date.slice(4)}-${task.date.slice(0, 2)}-${task.date.slice(2, 4)}T${task.time.slice(0, 2)}:${task.time.slice(2)}:00Z`
-    );
-    
-    const rrule = {
+    const rule = {
         FREQ: task.recurrence.toUpperCase(),
         INTERVAL: 1,
-        DTSTART: formatDateForICS(dtStart)
+        COUNT: 100, // Limit to 100 occurrences
+        BYDAY: ''
     };
     
-    return Object.entries(rrule)
+    // Set the day of week for weekly recurrence
+    if (task.recurrence === 'weekly') {
+        const days = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        const dayOfWeek = new Date(
+            `20${task.date.slice(4)}-${task.date.slice(0, 2)}-${task.date.slice(2, 4)}`
+        ).getDay();
+        rule.BYDAY = days[dayOfWeek];
+    }
+    
+    // Only include non-empty properties
+    return Object.entries(rule)
+        .filter(([_, value]) => value !== '')
         .map(([key, value]) => `${key}=${value}`)
         .join(';');
 }
@@ -330,8 +338,8 @@ function exportToCalendar(task) {
     const end = formatDate(endDate);
     const now = formatDate(new Date());
     
-    // Create ICS content
-    const icsContent = [
+    // Create ICS content with optional RRULE
+    const icsLines = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
         'PRODID:-//Task Manager PWA//EN',
@@ -344,11 +352,15 @@ function exportToCalendar(task) {
         isAllDay ? `DTEND;VALUE=DATE:${formatDate(endDate, true)}` : `DTEND:${formatDate(endDate)}`,
         `SUMMARY:${task.title.replace(/[\,;]/g, '\\$&')}`,
         `DESCRIPTION:${task.title.replace(/[\,;]/g, '\\$&')}`,
+        task.recurrence ? `RRULE:${getRRule(task)}` : null,
         'STATUS:CONFIRMED',
         'TRANSP:OPAQUE',
         'END:VEVENT',
         'END:VCALENDAR'
-    ].filter(Boolean).join('\r\n');
+    ];
+    
+    // Filter out any null/undefined lines and join with CRLF
+    const icsContent = icsLines.filter(line => line !== null && line !== undefined).join('\r\n');
     
     // Create and trigger download
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -361,6 +373,9 @@ function exportToCalendar(task) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    // Show success message
+    alert(`Task exported to calendar${task.recurrence ? ' (recurring)' : ''}!`);
 }
 
 // Event Listeners
