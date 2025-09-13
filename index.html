@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4a76a8">
+    <title>Task Manager PWA</title>
+    <base href="/task-manager-pwa/">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Task Manager</h1>
+        </header>
+        
+        <main>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task">Task Description</label>
+                    <input type="text" id="task" required placeholder="What needs to be done?">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="date">Date (MMDDYY)</label>
+                        <input type="text" id="date" pattern="\d{6}" placeholder="MMDDYY" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="time">Time (HHMM)</label>
+                        <input type="text" id="time" pattern="\d{4}" placeholder="HHMM" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Duration (min)</label>
+                        <input type="number" id="duration" min="1" value="60" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn">Add Task</button>
+            </form>
+            
+            <div id="task-list" class="task-list">
+                <!-- Tasks will be added here dynamically -->
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>
