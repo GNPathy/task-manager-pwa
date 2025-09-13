@@ -90,7 +90,6 @@ function addTask(event) {
     const taskText = taskInput.value.trim();
     const taskDate = dateInput.value;
     const taskTime = timeInput.value;
-    const taskDuration = parseInt(durationInput.value) || 60;
     const taskType = document.querySelector('input[name="task-type"]:checked').value;
     const recurrence = recurrenceSelect.value;
     
@@ -105,9 +104,12 @@ function addTask(event) {
     
     // Format time as HHMM (use 1200 as default for all-day reminders)
     let formattedTime = '1200';
-    if (taskType === 'appointment' && taskTime) {
+    let taskDuration = 0; // Default for all-day events
+    
+    if (taskType === 'appointment') {
         const [hours, minutes] = taskTime.split(':');
         formattedTime = `${hours.padStart(2, '0')}${minutes.padStart(2, '0')}`;
+        taskDuration = parseInt(durationInput.value) || 60; // Only use duration for appointments
     }
     
     const task = {
@@ -273,34 +275,38 @@ function exportToCalendar(task) {
     const year = `20${task.date.slice(4)}`;
     const month = task.date.slice(0, 2);
     const day = task.date.slice(2, 4);
-    const hours = task.time.slice(0, 2);
-    const minutes = task.time.slice(2);
     
     // Create start date (in local time)
-    const startDate = new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hours),
-        parseInt(minutes)
-    );
-    
-    // For all-day events, set to start of day and next day
+    let startDate, endDate;
     const isAllDay = task.type === 'reminder';
     
-    // Calculate end date
-    let endDate;
     if (isAllDay) {
-        // For all-day events, set to end of day
+        // For all-day events, set to start of day and next day
+        startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 1);
     } else {
-        // For appointments, add duration
+        // For appointments, use specific time and add duration
+        const hours = task.time.slice(0, 2);
+        const minutes = task.time.slice(2);
+        startDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hours),
+            parseInt(minutes)
+        );
         endDate = new Date(startDate.getTime() + (task.duration * 60000));
     }
     
     // Format dates for ICS (in UTC)
-    const formatDate = (date) => {
+    const formatDate = (date, isAllDay = false) => {
+        if (isAllDay) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}${m}${d}`;
+        }
         return formatDateForICS(new Date(date.toISOString()));
     };
     
@@ -318,11 +324,10 @@ function exportToCalendar(task) {
         'BEGIN:VEVENT',
         `UID:${task.id}@task-manager-pwa`,
         `DTSTAMP:${formatDateForICS(new Date())}`,
-        isAllDay ? 'DT;VALUE=DATE:' + formatDate(startDate).replace(/T.*/, '') : `DTSTART:${formatDate(startDate)}`,
-        isAllDay ? 'DT;VALUE=DATE:' + formatDate(endDate).replace(/T.*/, '') : `DTEND:${formatDate(endDate)}`,
-        `SUMMARY:${task.title.replace(/[\\,;]/g, '\\$&')}`,
-        `DESCRIPTION:${task.title.replace(/[\\,;]/g, '\\$&')}`,
-        task.recurrence ? `RRULE:${getRRule(task)}` : '',
+        isAllDay ? `DTSTART;VALUE=DATE:${formatDate(startDate, true)}` : `DTSTART:${formatDate(startDate)}`,
+        isAllDay ? `DTEND;VALUE=DATE:${formatDate(endDate, true)}` : `DTEND:${formatDate(endDate)}`,
+        `SUMMARY:${task.title.replace(/[\,;]/g, '\\$&')}`,
+        `DESCRIPTION:${task.title.replace(/[\,;]/g, '\\$&')}`,
         'STATUS:CONFIRMED',
         'TRANSP:OPAQUE',
         'END:VEVENT',
