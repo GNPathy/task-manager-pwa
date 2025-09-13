@@ -6,22 +6,30 @@ const timeInput = document.getElementById('time');
 const durationInput = document.getElementById('duration');
 const taskList = document.getElementById('task-list');
 
+// Format date as YYYY-MM-DD
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Format time as HH:MM
+function formatTimeForInput(date) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
 // Initialize the app
 function init() {
     // Load tasks from localStorage
     loadTasks();
     
-    // Set today's date as default
-    const today = new Date();
-    const dateStr = `${String(today.getMonth() + 1).padStart(2, '0')}` +
-                   `${String(today.getDate()).padStart(2, '0')}` +
-                   `${String(today.getFullYear()).slice(-2)}`;
-    dateInput.value = dateStr;
-    
-    // Set current time as default
-    const timeStr = `${String(today.getHours()).padStart(2, '0')}` +
-                   `${String(today.getMinutes()).padStart(2, '0')}`;
-    timeInput.value = timeStr;
+    // Set today's date and current time as default
+    const now = new Date();
+    dateInput.value = formatDateForInput(now);
+    timeInput.value = formatTimeForInput(now);
     
     // Register service worker
     if ('serviceWorker' in navigator) {
@@ -56,30 +64,32 @@ function loadTasks() {
 function addTask(event) {
     event.preventDefault();
     
-    const task = {
-        id: Date.now(),
-        title: taskInput.value.trim(),
-        date: dateInput.value.trim(),
-        time: timeInput.value.trim(),
-        duration: parseInt(durationInput.value) || 60,
-        completed: false
-    };
+    const taskText = taskInput.value.trim();
+    const taskDate = dateInput.value;
+    const taskTime = timeInput.value;
+    const taskDuration = parseInt(durationInput.value) || 60;
     
-    // Basic validation
-    if (!task.title || !task.date || !task.time) {
+    if (!taskText || !taskDate || !taskTime) {
         alert('Please fill in all fields');
         return;
     }
     
-    if (!/^\d{6}$/.test(task.date)) {
-        alert('Date must be in MMDDYY format');
-        return;
-    }
+    // Format date as MMDDYY
+    const [year, month, day] = taskDate.split('-');
+    const formattedDate = `${month}${day}${year.slice(2)}`;
     
-    if (!/^\d{4}$/.test(task.time)) {
-        alert('Time must be in HHMM format');
-        return;
-    }
+    // Format time as HHMM
+    const [hours, minutes] = taskTime.split(':');
+    const formattedTime = `${hours}${minutes}`;
+    
+    const task = {
+        id: Date.now().toString(),
+        title: taskText,
+        date: formattedDate,
+        time: formattedTime,
+        duration: taskDuration,
+        completed: false
+    };
     
     // Save task
     const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
@@ -89,8 +99,11 @@ function addTask(event) {
     // Add to DOM
     addTaskToDOM(task, tasks.length - 1);
     
-    // Reset form
-    taskForm.reset();
+    // Reset form but keep the current date and time
+    taskInput.value = '';
+    const now = new Date();
+    dateInput.value = formatDateForInput(now);
+    timeInput.value = formatTimeForInput(now);
     taskInput.focus();
 }
 

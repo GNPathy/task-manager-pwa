@@ -25,15 +25,19 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="date">Date (MMDDYY)</label>
-                        <input type="text" id="date" pattern="\d{6}" placeholder="MMDDYY" required>
+                        <label for="date">Date:</label>
+                        <div class="input-with-icon">
+                            <input type="date" id="date" required>
+                            <span class="icon">📅</span>
+                        </div>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="time">Time (HHMM)</label>
-                        <input type="text" id="time" pattern="\d{4}" placeholder="HHMM" required>
+                        <label for="time">Time:</label>
+                        <div class="input-with-icon">
+                            <input type="time" id="time" required>
+                            <span class="icon">🕒</span>
+                        </div>
                     </div>
-                    
                     <div class="form-group">
                         <label for="duration">Duration (min)</label>
                         <input type="number" id="duration" min="1" value="60" required>
