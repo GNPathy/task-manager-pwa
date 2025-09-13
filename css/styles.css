@@ -114,6 +114,83 @@ input[type="time"]:focus {
     color: #666;
 }
 
+/* Radio and Select Styles */
+.radio-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+    width: auto;
+}
+
+select.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: white;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}
+
+select.form-control:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px rgba(93, 156, 236, 0.2);
+}
+
+/* Task Meta */
+.task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.task-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f5f7fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+/* Task Recurrence Badge */
+.recurrence-badge {
+    display: inline-block;
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* Hide default date/time picker arrows in WebKit browsers */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
@@ -160,36 +237,51 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     overflow: hidden;
 }
 
+/* Task Item Styles */
 .task-item {
-    padding: 1rem 1.5rem;
+    padding: 1rem;
+    border-left: 4px solid var(--primary-color);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s;
+    align-items: flex-start;
+    transition: all 0.2s ease;
+    background: white;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.task-item.reminder {
+    border-left-color: #4caf50; /* Green for reminders */
+}
+
+.task-item.appointment {
+    border-left-color: #2196f3; /* Blue for appointments */
 }
 
 .task-item:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .task-item:hover {
-    background-color: #f9f9f9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .task-info {
     flex: 1;
 }
 
+/* Task Title */
 .task-title {
     font-weight: 500;
-    margin-bottom: 0.25rem;
-}
-
-.task-meta {
-    font-size: 0.85rem;
-    color: #666;
+    font-size: 1.05rem;
+    color: #2c3e50;
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     gap: 1rem;
 }
 

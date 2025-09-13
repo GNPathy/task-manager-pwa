@@ -23,7 +23,21 @@
                     <input type="text" id="task" required placeholder="What needs to be done?">
                 </div>
                 
-                <div class="form-row">
+                <div class="form-group">
+                    <label>Task Type</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="task-type" value="appointment" checked>
+                            <span>Appointment (with duration)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="task-type" value="reminder">
+                            <span>Reminder (all-day)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-row" id="appointment-fields">
                     <div class="form-group">
                         <label for="date">Date:</label>
                         <div class="input-with-icon">
@@ -42,6 +56,17 @@
                         <label for="duration">Duration (min)</label>
                         <input type="number" id="duration" min="1" value="60" required>
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="recurrence">Recurrence</label>
+                    <select id="recurrence" class="form-control">
+                        <option value="none">Does not repeat</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
                 </div>
                 
                 <button type="submit" class="btn">Add Task</button>

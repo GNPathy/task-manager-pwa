@@ -5,6 +5,9 @@ const dateInput = document.getElementById('date');
 const timeInput = document.getElementById('time');
 const durationInput = document.getElementById('duration');
 const taskList = document.getElementById('task-list');
+const taskTypeInputs = document.querySelectorAll('input[name="task-type"]');
+const appointmentFields = document.getElementById('appointment-fields');
+const recurrenceSelect = document.getElementById('recurrence');
 
 // Format date as YYYY-MM-DD
 function formatDateForInput(date) {
@@ -21,6 +24,18 @@ function formatTimeForInput(date) {
     return `${hours}:${minutes}`;
 }
 
+// Toggle appointment fields based on task type
+function toggleAppointmentFields() {
+    const isAppointment = document.querySelector('input[name="task-type"]:checked').value === 'appointment';
+    appointmentFields.style.display = isAppointment ? 'flex' : 'none';
+    if (!isAppointment) {
+        // Set default duration for reminders
+        durationInput.value = '0';
+    } else if (durationInput.value === '0') {
+        durationInput.value = '60'; // Default duration for appointments
+    }
+}
+
 // Initialize the app
 function init() {
     // Load tasks from localStorage
@@ -30,6 +45,14 @@ function init() {
     const now = new Date();
     dateInput.value = formatDateForInput(now);
     timeInput.value = formatTimeForInput(now);
+    
+    // Set up task type toggle
+    taskTypeInputs.forEach(input => {
+        input.addEventListener('change', toggleAppointmentFields);
+    });
+    
+    // Initialize UI state
+    toggleAppointmentFields();
     
     // Register service worker
     if ('serviceWorker' in navigator) {
@@ -68,9 +91,11 @@ function addTask(event) {
     const taskDate = dateInput.value;
     const taskTime = timeInput.value;
     const taskDuration = parseInt(durationInput.value) || 60;
+    const taskType = document.querySelector('input[name="task-type"]:checked').value;
+    const recurrence = recurrenceSelect.value;
     
-    if (!taskText || !taskDate || !taskTime) {
-        alert('Please fill in all fields');
+    if (!taskText || !taskDate || (taskType === 'appointment' && !taskTime)) {
+        alert('Please fill in all required fields');
         return;
     }
     
@@ -78,16 +103,22 @@ function addTask(event) {
     const [year, month, day] = taskDate.split('-');
     const formattedDate = `${month}${day}${year.slice(2)}`;
     
-    // Format time as HHMM
-    const [hours, minutes] = taskTime.split(':');
-    const formattedTime = `${hours}${minutes}`;
+    // Format time as HHMM (use 1200 as default for all-day reminders)
+    let formattedTime = '1200';
+    if (taskType === 'appointment' && taskTime) {
+        const [hours, minutes] = taskTime.split(':');
+        formattedTime = `${hours.padStart(2, '0')}${minutes.padStart(2, '0')}`;
+    }
     
     const task = {
         id: Date.now().toString(),
         title: taskText,
+        type: taskType,
         date: formattedDate,
         time: formattedTime,
-        duration: taskDuration,
+        duration: taskType === 'appointment' ? taskDuration : 0,
+        recurrence: recurrence === 'none' ? null : recurrence,
+        createdAt: new Date().toISOString(),
         completed: false
     };
     
@@ -107,6 +138,18 @@ function addTask(event) {
     taskInput.focus();
 }
 
+// Format recurrence text
+function getRecurrenceText(recurrence) {
+    if (!recurrence) return '';
+    const texts = {
+        'daily': 'Daily',
+        'weekly': 'Weekly',
+        'monthly': 'Monthly',
+        'yearly': 'Yearly'
+    };
+    return `<span class="recurrence-badge">${texts[recurrence]}</span>`;
+}
+
 // Add task to the DOM
 function addTaskToDOM(task, index) {
     // Remove empty state if present
@@ -117,28 +160,48 @@ function addTaskToDOM(task, index) {
     // Format date for display (MM/DD/YY)
     const formattedDate = `${task.date.substring(0, 2)}/${task.date.substring(2, 4)}/${task.date.substring(4)}`;
     
-    // Format time for display (HH:MM AM/PM)
-    const taskHours = parseInt(task.time.substring(0, 2));
-    const taskMinutes = task.time.substring(2);
-    const formattedTime = `${String(taskHours % 12 || 12).padStart(2, '0')}:${taskMinutes} ${taskHours >= 12 ? 'PM' : 'AM'}`;
-    
-    // Format duration
-    const durationHours = Math.floor(task.duration / 60);
-    const durationMinutes = task.duration % 60;
-    const formattedDuration = durationHours > 0 ? `${durationHours}h ${durationMinutes}m` : `${durationMinutes}m`;
-    
     // Create task element
     const taskElement = document.createElement('div');
-    taskElement.className = `task-item ${task.completed ? 'completed' : ''}`;
+    taskElement.className = `task-item ${task.completed ? 'completed' : ''} ${task.type}`;
     taskElement.dataset.id = task.id;
     
-    taskElement.innerHTML = `
+    // Common task info
+    let taskHTML = `
         <div class="task-info">
-            <div class="task-title">${task.title}</div>
+            <div class="task-title">
+                ${task.title}
+                ${getRecurrenceText(task.recurrence)}
+            </div>
             <div class="task-meta">
                 <span>📅 ${formattedDate}</span>
+    `;
+    
+    // Add time and duration for appointments
+    if (task.type === 'appointment') {
+        // Format time for display (HH:MM AM/PM)
+        const taskHours = parseInt(task.time.substring(0, 2));
+        const taskMinutes = task.time.substring(2);
+        const formattedTime = `${String(taskHours % 12 || 12).padStart(2, '0')}:${taskMinutes} ${taskHours >= 12 ? 'PM' : 'AM'}`;
+        
+        // Format duration
+        const durationHours = Math.floor(task.duration / 60);
+        const durationMinutes = task.duration % 60;
+        const formattedDuration = durationHours > 0 ? 
+            `${durationHours}h ${durationMinutes}m` : 
+            `${durationMinutes}m`;
+        
+        taskHTML += `
                 <span>🕒 ${formattedTime}</span>
                 <span>⏱️ ${formattedDuration}</span>
+        `;
+    } else {
+        taskHTML += `
+                <span>⏰ All day</span>
+        `;
+    }
+    
+    // Close task meta and add actions
+    taskHTML += `
             </div>
         </div>
         <div class="task-actions">
@@ -146,6 +209,8 @@ function addTaskToDOM(task, index) {
             <button class="btn-icon delete-btn" title="Delete">🗑️</button>
         </div>
     `;
+    
+    taskElement.innerHTML = taskHTML;
     
     // Add event listeners
     const deleteBtn = taskElement.querySelector('.delete-btn');
@@ -169,16 +234,49 @@ function deleteTask(taskId) {
     loadTasks();
 }
 
+// Format date for ICS (UTC)
+function formatDateForICS(date) {
+    return [
+        date.getUTCFullYear(),
+        String(date.getUTCMonth() + 1).padStart(2, '0'),
+        String(date.getUTCDate()).padStart(2, '0'),
+        'T',
+        String(date.getUTCHours()).padStart(2, '0'),
+        String(date.getUTCMinutes()).padStart(2, '0'),
+        String(date.getUTCSeconds()).padStart(2, '0'),
+        'Z'
+    ].join('');
+}
+
+// Get RRULE for recurring events
+function getRRule(task) {
+    if (!task.recurrence) return '';
+    
+    const dtStart = new Date(
+        `20${task.date.slice(4)}-${task.date.slice(0, 2)}-${task.date.slice(2, 4)}T${task.time.slice(0, 2)}:${task.time.slice(2)}:00Z`
+    );
+    
+    const rrule = {
+        FREQ: task.recurrence.toUpperCase(),
+        INTERVAL: 1,
+        DTSTART: formatDateForICS(dtStart)
+    };
+    
+    return Object.entries(rrule)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(';');
+}
+
 // Export task to calendar (ICS format)
 function exportToCalendar(task) {
-    // Format date and time for ICS
+    // Parse task date and time
     const year = `20${task.date.slice(4)}`;
     const month = task.date.slice(0, 2);
     const day = task.date.slice(2, 4);
     const hours = task.time.slice(0, 2);
     const minutes = task.time.slice(2);
     
-    // Calculate end time based on duration
+    // Create start date (in local time)
     const startDate = new Date(
         parseInt(year),
         parseInt(month) - 1,
@@ -187,43 +285,23 @@ function exportToCalendar(task) {
         parseInt(minutes)
     );
     
-    const endDate = new Date(startDate.getTime() + (task.duration * 60000));
+    // For all-day events, set to start of day and next day
+    const isAllDay = task.type === 'reminder';
     
-    // Format dates for ICS in Pacific Time
+    // Calculate end date
+    let endDate;
+    if (isAllDay) {
+        // For all-day events, set to end of day
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+    } else {
+        // For appointments, add duration
+        endDate = new Date(startDate.getTime() + (task.duration * 60000));
+    }
+    
+    // Format dates for ICS (in UTC)
     const formatDate = (date) => {
-        // Convert to Pacific Time
-        const options = { 
-            timeZone: 'America/Los_Angeles',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        };
-        
-        // Format date in Pacific Time
-        const dtf = new Intl.DateTimeFormat('en-US', options);
-        const [
-            { value: month },
-            ,
-            { value: day },
-            ,
-            { value: year },
-            ,
-            { value: hour },
-            ,
-            { value: minute },
-            ,
-            { value: second }
-        ] = dtf.formatToParts(date);
-        
-        // Format as YYYYMMDDTHHMMSS (Pacific Time is -0700 or -0800 depending on DST)
-        const isPDT = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' }).includes('PDT');
-        const tzOffset = isPDT ? '-0700' : '-0800';
-        
-        return `${year}${month}${day}T${hour}${minute}${second}${tzOffset}`;
+        return formatDateForICS(new Date(date.toISOString()));
     };
     
     const start = formatDate(startDate);
@@ -234,17 +312,22 @@ function exportToCalendar(task) {
     const icsContent = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Task Manager//EN',
+        'PRODID:-//Task Manager PWA//EN',
         'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
         'BEGIN:VEVENT',
-        `DTSTAMP:${now}`,
-        `DTSTART:${start}`,
-        `DTEND:${end}`,
-        `SUMMARY:${task.title}`,
-        `DESCRIPTION:${task.title}`,
+        `UID:${task.id}@task-manager-pwa`,
+        `DTSTAMP:${formatDateForICS(new Date())}`,
+        isAllDay ? 'DT;VALUE=DATE:' + formatDate(startDate).replace(/T.*/, '') : `DTSTART:${formatDate(startDate)}`,
+        isAllDay ? 'DT;VALUE=DATE:' + formatDate(endDate).replace(/T.*/, '') : `DTEND:${formatDate(endDate)}`,
+        `SUMMARY:${task.title.replace(/[\\,;]/g, '\\$&')}`,
+        `DESCRIPTION:${task.title.replace(/[\\,;]/g, '\\$&')}`,
+        task.recurrence ? `RRULE:${getRRule(task)}` : '',
+        'STATUS:CONFIRMED',
+        'TRANSP:OPAQUE',
         'END:VEVENT',
         'END:VCALENDAR'
-    ].join('\r\n');
+    ].filter(Boolean).join('\r\n');
     
     // Create and trigger download
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
