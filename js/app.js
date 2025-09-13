@@ -35,36 +35,45 @@ function toggleAppointmentFields() {
         durationInput.value = '60'; // Default duration for appointments
     }
 }
-
 // Initialize the app
 function init() {
-    // Load tasks from localStorage
-    loadTasks();
+    // Set default date to today
+    const today = new Date();
+    dateInput.value = today.toISOString().split('T')[0];
     
-    // Set today's date and current time as default
-    const now = new Date();
-    dateInput.value = formatDateForInput(now);
-    timeInput.value = formatTimeForInput(now);
+    // Set default time to next hour
+    const nextHour = new Date(today.getTime() + 60 * 60 * 1000);
+    timeInput.value = `${String(nextHour.getHours()).padStart(2, '0')}:00`;
+    
+    // Toggle time/duration fields based on task type
+    const toggleAppointmentFields = (isAppointment) => {
+        appointmentFields.style.display = isAppointment ? 'flex' : 'none';
+        timeInput.required = isAppointment;
+        durationInput.required = isAppointment;
+    };
     
     // Set up task type toggle
-    taskTypeInputs.forEach(input => {
-        input.addEventListener('change', toggleAppointmentFields);
+    document.querySelectorAll('input[name="task-type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            toggleAppointmentFields(e.target.value === 'appointment');
+        });
     });
     
-    // Initialize UI state
-    toggleAppointmentFields();
+    // Initialize fields based on default selection
+    toggleAppointmentFields(document.querySelector('input[name="task-type"]:checked').value === 'appointment');
+    
+    // Load tasks
+    loadTasks();
     
     // Register service worker
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/task-manager-pwa/service-worker.js', { scope: '/task-manager-pwa/' })
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        });
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful');
+            })
+            .catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
     }
 }
 
@@ -93,7 +102,7 @@ function addTask(event) {
     const taskType = document.querySelector('input[name="task-type"]:checked').value;
     const recurrence = recurrenceSelect.value;
     
-    if (!taskText || !taskDate || (taskType === 'appointment' && !taskTime)) {
+    if (!taskText || !taskDate) {
         alert('Please fill in all required fields');
         return;
     }
@@ -102,14 +111,18 @@ function addTask(event) {
     const [year, month, day] = taskDate.split('-');
     const formattedDate = `${month}${day}${year.slice(2)}`;
     
-    // Format time as HHMM (use 1200 as default for all-day reminders)
-    let formattedTime = '1200';
+    // Format time as HHMM
+    let formattedTime = '1200'; // Default for all-day reminders
     let taskDuration = 0; // Default for all-day events
     
     if (taskType === 'appointment') {
+        if (!taskTime) {
+            alert('Please enter a time for the appointment');
+            return;
+        }
         const [hours, minutes] = taskTime.split(':');
         formattedTime = `${hours.padStart(2, '0')}${minutes.padStart(2, '0')}`;
-        taskDuration = parseInt(durationInput.value) || 60; // Only use duration for appointments
+        taskDuration = parseInt(durationInput.value) || 60;
     }
     
     const task = {
@@ -124,7 +137,7 @@ function addTask(event) {
         completed: false
     };
     
-    // Save task
+    // Save to localStorage
     const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     tasks.push(task);
     localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -138,6 +151,9 @@ function addTask(event) {
     dateInput.value = formatDateForInput(now);
     timeInput.value = formatTimeForInput(now);
     taskInput.focus();
+    
+    // Export to calendar
+    exportToCalendar(task);
 }
 
 // Format recurrence text
@@ -296,7 +312,7 @@ function exportToCalendar(task) {
             parseInt(hours),
             parseInt(minutes)
         );
-        endDate = new Date(startDate.getTime() + (task.duration * 60000));
+        endDate = new Date(startDate.getTime() + ((task.duration || 60) * 60000));
     }
     
     // Format dates for ICS (in UTC)
