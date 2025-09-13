@@ -104,13 +104,15 @@ function addTaskToDOM(task, index) {
     // Format date for display (MM/DD/YY)
     const formattedDate = `${task.date.substring(0, 2)}/${task.date.substring(2, 4)}/${task.date.substring(4)}`;
     
-    // Format time for display (HH:MM)
-    const formattedTime = `${task.time.substring(0, 2)}:${task.time.substring(2)}`;
+    // Format time for display (HH:MM AM/PM)
+    const taskHours = parseInt(task.time.substring(0, 2));
+    const taskMinutes = task.time.substring(2);
+    const formattedTime = `${String(taskHours % 12 || 12).padStart(2, '0')}:${taskMinutes} ${taskHours >= 12 ? 'PM' : 'AM'}`;
     
     // Format duration
-    const hours = Math.floor(task.duration / 60);
-    const minutes = task.duration % 60;
-    const formattedDuration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    const durationHours = Math.floor(task.duration / 60);
+    const durationMinutes = task.duration % 60;
+    const formattedDuration = durationHours > 0 ? `${durationHours}h ${durationMinutes}m` : `${durationMinutes}m`;
     
     // Create task element
     const taskElement = document.createElement('div');
@@ -174,12 +176,27 @@ function exportToCalendar(task) {
     
     const endDate = new Date(startDate.getTime() + (task.duration * 60000));
     
-    // Format dates for ICS
+    // Format dates for ICS with timezone
     const formatDate = (date) => {
-        return date.toISOString()
-            .replace(/[-:]/g, '')
-            .replace(/\.\d{3}/, '')
-            .replace('Z', '');
+        // Get timezone offset in minutes and convert to HHMM
+        const tzOffset = -date.getTimezoneOffset();
+        const tzSign = tzOffset >= 0 ? '+' : '-';
+        const tzHours = Math.floor(Math.abs(tzOffset) / 60);
+        const tzMinutes = Math.abs(tzOffset) % 60;
+        const tzString = tzSign + 
+            String(tzHours).padStart(2, '0') + 
+            String(tzMinutes).padStart(2, '0');
+            
+        // Format date components
+        const pad = n => n < 10 ? '0' + n : n;
+        return date.getFullYear() +
+            pad(date.getMonth() + 1) +
+            pad(date.getDate()) +
+            'T' +
+            pad(date.getHours()) +
+            pad(date.getMinutes()) +
+            pad(date.getSeconds()) +
+            tzString;
     };
     
     const start = formatDate(startDate);
@@ -193,9 +210,9 @@ function exportToCalendar(task) {
         'PRODID:-//Task Manager//EN',
         'CALSCALE:GREGORIAN',
         'BEGIN:VEVENT',
-        `DTSTAMP:${now}`,  
-        `DTSTART:${start}`,
-        `DTEND:${end}`,
+        `DTSTAMP:${now}`,
+        `DTSTART;TZID=${Intl.DateTimeFormat().resolvedOptions().timeZone}:${start}`,
+        `DTEND;TZID=${Intl.DateTimeFormat().resolvedOptions().timeZone}:${end}`,
         `SUMMARY:${task.title}`,
         `DESCRIPTION:${task.title}`,
         'END:VEVENT',
